@@ -1,0 +1,85 @@
+---
+
+# metadata format versioning
+version: "1.1.0"
+
+metadata:
+  # 'type' refers to the content being stored. Current allowed types: ["source"
+  # (default), "config", "template", "reference", "eucs"]. If a repo has both source and config, it
+  # is automatically a 'source' type repo (with a template being the exemption
+  # to said structure).
+  # REQUIRED: true
+  type: "source"
+
+  # 'app' refers to the application(s) this repo is associated with. It must
+  # include at least 1 owner and CI number
+  # REQUIRED: true
+  app:
+    # 'owners' is a list of contact information on the repo in order to provide
+    # a quick and easy way of contacting anyone responsible for said repo.
+    # REQUIRED: true
+    owners:
+      - name: "Premil Eapen"
+        email: "premil_eapen@manulife.com"
+
+    # 'ci' is a list of valid CI's that are associated with the repo. Any issues,
+    # concerns, etc. will tie back to the associated CI's. If no CI is specified,
+    # a valid reason must be supplied
+    # REQUIRED: true
+    # ci:
+    #   - CI000000001234
+    #   - CI000000005678
+
+    # REQUIRED: false - unless there are required elements not supplied and an
+    # temporary exemption MUST be generated.
+    exemptions:
+      - name: "App owners and App ci sections to update later"
+        date: "2023-01-26 00:00:00 EST"
+        # Each exemption MUST have a valid and approved reason. If no reason is
+        # supplied, the exemption will not be considered nor valid regardless of
+        # the approvers.
+        reason: "The initial meta data file is added with scripts and the respective repo owners to update all mandatory sections"
+        # Each exemption must have at least 1 valid approver that has reviewed
+        # the reasoning and any additional evidence required
+        approvers:
+          - name: "Elliott Polk"
+            email: "Benjamin_Elliott_Polk@manulifeam.com"
+
+  # 'security' is used to track which repos have security features enabled and
+  # track any exceptional cases where scanning cannot be enabled.
+  #
+  # REQUIRED: false - unless there are required elements not supplied and an
+  # exemption MUST be generated.
+  security:
+    SAST:
+
+      # The default behavior of this section is to presume TRUE and the use of
+      # GitHub Advanced Security (GHAS) + CodeQL if no value is specified.
+      # If no SAST tooling is enable, it must be set to FALSE and be paired with
+      # an exemption.
+      enabled: FALSE
+
+      # If the repo uses an alternative scanning tool(s) (e.g. Fortify, Checkmarx,
+      # etc.), each must be documented in order to ensure the repo will not show
+      # up in the list of apps/repos out of compliance. This MUST include the
+      # name, URL, and reason for using the tool. The URL MUST be a link to the
+      # 'project' in the tool in order to validate usage of said tool.
+      # tools:
+      #   - name: "Fortify"
+      #     url: "https://fortify.manulife.ca/ssc/html/ssc/dashboard/issue-stats"
+      #     reason: "A simple explanation as to the use of a tool outside of GitHub Advanced Security (GHAS) + CodeQL"
+
+      # 'exemption' is used to track when scanning automation is not enabled,
+      # when the original exemption was created, and who approved it.
+      exemptions:
+        - name: "CodeQL unsupported language"
+          date: "2023-01-26 00:00:00 EST"
+          # Each exemption MUST have a valid and approved reason. If no reason is
+          # supplied, the exemption will not be considered nor valid regardless of
+          # the approvers.
+          reason: "The repository contains CodeQL unsupported language"
+          # Each exemption must have at least 1 valid approver that has reviewed
+          # the reasoning and any additional evidence required
+          approvers:
+            - name: "Elliott Polk"
+              email: "Benjamin_Elliott_Polk@manulifeam.com"

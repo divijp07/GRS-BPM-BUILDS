@@ -1,0 +1,172 @@
+$verNum=get-date -format yyyyMMdd-hh:mm
+
+#Clean the build location
+remove-item "e:\RemoteBuilds\BPM\*" -recurse -force -erroraction "silentlycontinue"
+copy-item -path "e:\RemoteBuilds\Includes\BPM\*" -destination "e:\RemoteBuilds\BPM" -Recurse -force
+
+#Create the version info file for ear packages
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+echo "GRS_BPM_${env:Release}_${env:BranchType}_${verNum}" > "e:\RemoteBuilds\BPM\mliConf\VersionInfo.txt"
+
+#Copy to alternate building location, since the jenkins root is too long for java builds
+copy-item -path "${env:WORKSPACE}\GRS-${env:Release}-${env:BranchType}\*" -destination "e:\RemoteBuilds\BPM" -Recurse -force
+
+$copyToLoc="\\entsserver21\dfs\shared\can\mps\environments\staging\BPM"
+New-PsDrive -Name "P" -PSProvider "FileSystem" -Root "${copyToLoc}" -Credential $mycreds
+
+if(!(Test-Path "P:\${env:Release}"))
+{
+    new-item -path "P:\${env:Release}" -type directory
+}
+
+if(!(Test-Path "P:\${env:Release}\${env:BranchType}"))
+{
+    new-item -path "P:\${env:Release}\${env:BranchType}" -type directory
+}
+
+if(!(Test-Path "P:\${env:Release}\${env:BranchType}\cluster_svc"))
+{
+    new-item -path "P:\${env:Release}\${env:BranchType}\cluster_svc" -type directory
+}
+
+if(!(Test-Path "P:\${env:Release}\${env:BranchType}\cluster_bpm"))
+{
+    new-item -path "P:\${env:Release}\${env:BranchType}\cluster_bpm" -type directory
+}
+
+if(!(Test-Path "P:\${env:Release}\${env:BranchType}\standalone_jars"))
+{
+    new-item -path "P:\${env:Release}\${env:BranchType}\standalone_jars" -type directory
+}
+
+$stagDir="P:\${env:Release}\${env:BranchType}"
+
+cd \RemoteBuilds\BPM
+
+if(${env:AppToBuild} -eq "ALL")
+{
+  $ScanList=@("ActivatePolicySTPApp","ActivatePolicySTPproxy","agreement","agreementcompensation","agreementinvestments","agreementrules","agreementservices","assignPPSG","authorization","B2BAllianceSTPProxy","BulkContributionApp","BulkContributionSTPProxy","DecisionManagementproxy","emailnotification","employerPlanChangeSTPApp","employerPlanChangeSTPProxy","establishIndividual","establishMember","findadvisor","findadvisoragreement","findcustomer","findplangroup","fundDirection","funddiscretion","GroupPlanSetupSTPproxy","GroupPlanSetupSTPvApp","grsContributionsMediation","grsManageCustomerBrandingNContactInfoMediation","GRSSecurityMediation","GRSSecuritySSO","GRS_AccountDetailsMediationApp","GRS_AccountMediationApp","GRS_ManageCustomerContactInfoMediationApp","IndividualFlowSTPproxy","IndividualFlowSTPvApp","manageAffiliate","manageAgreementContributions","manageAgreementInvestmentPackage","ManageAgreementPayroll","ManageAwdCpoTracking","managebankinfo","manageBeneficiary","managecontract","manageCustomer","managecustomeraddress","ManageCustomerRelationship","managecustomertelephone","manageEApplication","manageEnrolment","manageEventTracking","managefinancialinstitution","ManageIndividual","managemember","managePayrollIntegration","managePlanGroup","managePlanTransfer","managePolicy","manageProfile","ManageServiceLog","ManageSponsor","managestatement","managesubmission","managetransaction","ManageUtilityMediationApp","MemberPlanChangesSTPApp","MemberPlanChangesSTPProxy","MemberShellEnrolmentSTPApp","newPlanSTPApp","newPlanSTPProxy","organizationstructure","PayrollIntegrationGateway","policyregistration","productcatalog","referencecatalog","ShellEnrolmentSTPproxy","verifyCustomer","viewAvailableInvestments")
+}else{
+  $ScanListTemp=[string]${env:AppToBuild}
+  $ScanList=${ScanListTemp}.split(",")
+}
+
+$branchName="${env:BranchType}-${env:Release}"
+$clusterBpmList=@("ActivatePolicySTPApp","B2BAllianceSTPProxy","BulkContributionSTPProxy","employerPlanChangeSTPApp","MemberPlanChangesSTPApp","NewPlanSTPApp","GroupPlanSetupSTPProxy","IndividualFlowSTPProxy","MemberShellEnrolmentSTPApp","BulkContributionApp","GroupPlanSetupSTPvApp","IndividualFlowSTPvApp")
+
+# Define exact EAR filenames for BPM cluster applications
+$clusterBpmEarFiles=@("GRS_ActivatePolicySTP_ModApp.ear","GRS_B2BAllianceSTP_ProxyModApp.ear","GRS_CeridianBulkContributionSTP_ProxyModApp.ear","GRS_CeridianEmployerPlanChangesSTP_ModApp.ear","GRS_CeridianMemberPlanChangesSTP_ModApp.ear","GRS_CeridianNewPlanSTP_ModApp.ear","GRS_GroupPlanSetupSTP_ProxyModApp.ear","GRS_IndividualFlowSTP_ProxyModApp.ear","GRS_MemberShellEnrolmentSTPApp.ear","GRS_CeridianBulkContributionSTP_Mod_v1_0_1App.ear","GRS_GroupPlanSetupSTP_Mod_v1_2_1App.ear","GRS_IndividualFlowSTP_Mod_v1_0_3App.ear")
+
+$srcLoc="E:\RemoteBuilds\BPM\target\ear"
+
+foreach($bldapp in $ScanList)
+{
+    #Execute the Ant build
+    $propFile="build_${bldapp}.properties"
+    $srcFile="GIT-BPM_${bldapp}.txt"
+    gc "E:\remotebuilds\bpm\SonarGitFiles\${srcFile}" | out-file "e:\remotebuilds\bpm\SonarGitFiles\tempfile.txt" -encoding Ascii
+    remove-item "e:\remotebuilds\bpm\SonarGitFiles\${srcFile}"
+    rename-item "e:\remotebuilds\bpm\SonarGitFiles\tempfile.txt" -NewName "${srcFile}"
+    
+    write-output "$propFile"
+    write-output "$srcFile"
+    
+    e:\was\ant\bin\ant.bat -buildfile e:\RemoteBuilds\BPM\build-single.xml "-Dbuild.app=${propFile}" "-Dgit.source.file=${srcFile}" "-Dgit.branch=${branchName}"
+}
+
+# Always create standalone GRS_Common.jar regardless of AppToBuild parameter
+Write-Output ""
+Write-Output "Creating enterprise-standard standalone GRS_Common.jar"
+
+# Set paths for standards-based JAR creation
+$sourceDir = "E:\RemoteBuilds\BPM\target\zip\expanded_folder\GRS_Common.jar"
+$tempDir = "E:\RemoteBuilds\BPM\temp\jar_creation"
+$jarName = "GRS_Common.jar"
+$versionInfoSource = "E:\RemoteBuilds\BPM\mliConf\VersionInfo.txt"
+
+if(Test-Path $sourceDir) {
+    try {
+        # Ensure we have Java jar command available
+        $jarCommand = if (Get-Command jar -ErrorAction SilentlyContinue) { "jar" } else { "$env:JAVA_HOME\bin\jar.exe" }
+
+        Write-Output "Creating enterprise-standard JAR: $sourceDir -> ${stagDir}\standalone_jars\$jarName"
+
+        # Create temp directory and copy files with exclusions
+        New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+        robocopy $sourceDir $tempDir /E /XF *.java .factorypath .jazzignore .gitignore .project .classpath /XD .git .svn .settings target bin /NFL /NDL /NJH /NJS
+
+        # Clean up development artifacts and create JAR
+        Get-ChildItem -Path $tempDir -Recurse -Filter "*.java" | Remove-Item -Force -ErrorAction SilentlyContinue
+
+        $localJarPath = "$tempDir\$jarName"
+        Push-Location $tempDir
+        & $jarCommand -cf "$localJarPath" -C . .
+        Pop-Location
+
+        if(Test-Path "$localJarPath") {
+            # Add version info if available
+            if (Test-Path $versionInfoSource) {
+                $versionTempDir = "E:\RemoteBuilds\BPM\temp\version_temp"
+                New-Item -ItemType Directory -Force -Path "$versionTempDir\META-INF\mliConf" | Out-Null
+                Copy-Item $versionInfoSource "$versionTempDir\META-INF\mliConf\versionInfo.txt"
+                Push-Location $versionTempDir
+                & $jarCommand -uf "$localJarPath" META-INF/mliConf/versionInfo.txt
+                Pop-Location
+                Remove-Item -Recurse -Force $versionTempDir
+            }
+
+            # Copy to staging directory
+            Copy-Item -Path "$localJarPath" -Destination "${stagDir}\standalone_jars\$jarName" -Force
+            $jarSize = [math]::Round((Get-Item "${stagDir}\standalone_jars\$jarName").Length/1KB,2)
+            Write-Output "SUCCESS: JAR created and copied to staging (${jarSize} KB)"
+        } else {
+            Write-Error "FAILED: JAR creation failed"
+        }
+
+        Remove-Item -Recurse -Force $tempDir
+
+    } catch {
+        Write-Error "ERROR creating GRS_Common.jar: $($_.Exception.Message)"
+        if(Test-Path $tempDir) { Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue }
+    }
+} else {
+    Write-Warning "GRS_Common source not found at: $sourceDir"
+    if(Test-Path "E:\RemoteBuilds\BPM\target\zip\expanded_folder") {
+        Write-Output "Available in target: $((Get-ChildItem 'E:\RemoteBuilds\BPM\target\zip\expanded_folder' -Directory -ErrorAction SilentlyContinue).Name -join ', ')"
+    }
+}
+
+# Copy EAR files to correct cluster directories based on application type
+Write-Output ""
+Write-Output "Copying EAR files to appropriate cluster directories"
+
+$earFiles = Get-ChildItem "${srcLoc}\*.ear" -ErrorAction SilentlyContinue
+
+if ($earFiles) {
+    foreach ($earFile in $earFiles) {
+        $earFileName = $earFile.Name
+        
+        # Check if this EAR file belongs to cluster_bpm using exact filename matching
+        if ($clusterBpmEarFiles -contains $earFileName) {
+            $targetDir = "${stagDir}\cluster_bpm"
+            Write-Output "BPM Cluster: $earFileName to cluster_bpm"
+        } else {
+            $targetDir = "${stagDir}\cluster_svc"
+            Write-Output "SVC Cluster: $earFileName to cluster_svc"
+        }
+        
+        try {
+            Copy-Item -Path $earFile.FullName -Destination "$targetDir\." -Force
+            Write-Output "  Successfully copied"
+        } catch {
+            Write-Error "  Failed to copy: $($_.Exception.Message)"
+        }
+    }
+} else {
+    Write-Warning "No EAR files found in ${srcLoc}"
+}
+
+Write-Output "Build and deployment preparation completed"
+
+Remove-PSDrive -Name "P"
+ 

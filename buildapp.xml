@@ -1,0 +1,517 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="${app.name}" basedir="." default="RunSonarQube">
+
+<!-- target RunSonarQube will execute scanning on the EARs created -->
+   <target name="RunSonarQube" depends="updateEARs" description="Executes Sonar Scanning on objects">
+	<if>
+	<equals arg1="${sonarqube.scan}" arg2="true"/>
+    <then>
+			 
+		<!-- Additional Sonar configuration (PMD need 1.5 when using annotations) -->
+	
+		<property name="sonar.java.source" value="${sonar.version}" />
+		<property name="sonar.java.target" value="${sonar.version}" />
+	
+		<!--  SERVER ON A REMOTE HOST - Here we use the default sonar setup  -->
+		<property name="sonar.host.url" value="https://sonar.manulife.com" />
+		<property name="sonar.projectKey" value="MFC_GRS_${app.name}" />
+		<property name="sonar.projectName" value="MFC_GRS_${app.name}" />
+		<property name="sonar.projectVersion" value="1.0" />
+		<property name="sonar.sources" value="${workingDir}/${module1Path}/${module1},${workingDir}/${module2Path}/${module2}" />
+		<property name="sonar.java.binaries" value="target" />
+		<property name="sonar.java.libraries" value="${libraryPath}/${library1}/*.jar,${libraryPath}/${library2}/*.jar" />
+	
+		<!--  Define the Sonar task  -->
+		<taskdef uri="antlib:org.sonar.ant" resource="org/sonar/ant/antlib.xml">
+			<classpath path="E:/WAS/SonarQube/sonarqube-ant-task-2.7.0.1612.jar" />
+		</taskdef>
+	
+		<sonar:sonar xmlns:sonar="antlib:org.sonar.ant">
+		</sonar:sonar>
+	
+	</then>
+    </if>
+    <!--<sleep seconds="10"/>-->
+ </target>
+
+  <target name="updateEARs" description="Creates Ear files from zip" depends="CreateEARs">
+
+		<!--exec executable="${servicedeploy.dir}/EARExpander.bat">
+			<arg line="-ear"/>
+			<arg line="${ear}/${app.name}.ear"/>
+			<arg line="-operationDir"/>
+			<arg line="${zip}/expanded_folder"/>
+			<arg line="-operation"/>
+			<arg line="expand"/>
+			<arg line="-expansionFlags"/>
+			<arg line="all"/>
+		</exec-->
+
+		<exec executable="cmd" dir="e:\RemoteBuilds\BPM\Builds\Builds\scripts\includes">
+		  <arg value="/c"/>
+		  <arg value="e:\RemoteBuilds\BPM\Builds\Builds\scripts\includes\RTCEARExpander_expand.bat"/>
+		  <arg value="${servicedeploy.dir}"/>
+		  <arg value="${ear}"/>
+		  <arg value="${app.name}"/>
+		  <arg value="${zip}"/>
+		</exec>
+
+		<echo>Finished expanded EARs</echo>
+		<property name="be.scripts" value="e:\RemoteBuilds\BPM\Builds\Builds\scripts"/>
+		<available file="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" property="config.present"/>
+		<if>
+			<equals arg1="${config.present}" arg2="true" />
+			<then>
+				<mkdir dir="${zip}/expanded_folder/META-INF/mliConf"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml"/>
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml"/>
+
+				<copyfile src="${be.scripts}\properties\Services\mliConf\configuration_${app.name}.xml" dest="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml"/>
+				<copyfile src="${workingDir}/mliConf/versionInfo.txt" dest="${zip}/expanded_folder/META-INF/mliConf/versionInfo.txt"/>
+				<if>
+					<equals arg1="${app.name}" arg2="GRS_EstablishIndividualMediationApp" />
+					<then>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+					</then>
+					<elseif>
+						<equals arg1="${app.name}" arg2="GRS_ManageCustomerMediationApp" />
+						<then>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="WAS_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="WAS_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="WAS_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="WAS_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="WAS_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="WAS_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="WAS_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="WAS_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="WAS_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="WAS_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="WAS_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="WAS_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="WAS_ENDPOINT" value="https://grqat.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="WAS_ENDPOINT" value="https://gruat.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="WAS_ENDPOINT" value="https://grtra.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="WAS_ENDPOINT" value="https://grprd.ihs.manulife.com"/>
+							
+							
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV01.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV02.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV03.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV04.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV05.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV06.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV07.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT01.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWAPNGRSSIT02.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT03.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT04.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT05.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="LEGACY_ENDPOINT" value="http://CDCWVIGPAPPU01.americas.manulife.net"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="LEGACY_ENDPOINT" value="http://uatgrswebservices.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSTrng.mfcgd.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="LEGACY_ENDPOINT" value="http://grswebservices.manulife.com"/>
+						</then>
+					</elseif>
+
+					<elseif>
+						<equals arg1="${app.name}" arg2="GRS_ManagePolicyMediationApp" />
+						<then>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://localhost:10269"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+						</then>
+					</elseif>
+					<elseif>
+						<equals arg1="${app.name}" arg2="GRS_PayrollIntegrationGatewayMediationApp" />
+						<then>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx-test.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+							<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://cdx.ceridian.ca/Ceridian.CDX.WebServices/FDXService"/>
+						</then>
+					</elseif>
+					<else>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grqat.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://gruat.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grtra.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="ENV_SPECIFIC_ENDPOINT" value="https://grprd.ihs.manulife.com"/>
+
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="WAS_ENDPOINT" value="https://grdev1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="WAS_ENDPOINT" value="https://grdev2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="WAS_ENDPOINT" value="https://grdev3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="WAS_ENDPOINT" value="https://grdev4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="WAS_ENDPOINT" value="https://grdev5.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="WAS_ENDPOINT" value="https://grdev6.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="WAS_ENDPOINT" value="https://grdev7.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="WAS_ENDPOINT" value="https://grsit1.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="WAS_ENDPOINT" value="https://grsit2.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="WAS_ENDPOINT" value="https://grsit3.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="WAS_ENDPOINT" value="https://grsit4.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="WAS_ENDPOINT" value="https://grsit5.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="WAS_ENDPOINT" value="https://grqat.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="WAS_ENDPOINT" value="https://gruat.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="WAS_ENDPOINT" value="https://grtra.ihs.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="WAS_ENDPOINT" value="https://grprd.ihs.manulife.com"/>
+
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev1_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV01.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev2_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV02.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev3_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV03.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev4_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV04.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev5_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV05.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev6_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV06.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/dev7_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSDEV07.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit1_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT01.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit2_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT01.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit3_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT01.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit4_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT04.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/sit5_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSSIT05.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/qat_configuration.xml" token="LEGACY_ENDPOINT" value="http://CDCWVIGPAPPU01.americas.manulife.net"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/uat_configuration.xml" token="LEGACY_ENDPOINT" value="http://uatgrswebservices.manulife.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/tra_configuration.xml" token="LEGACY_ENDPOINT" value="http://AZWCACGRSTrng.mfcgd.com"/>
+						<replace file="${zip}/expanded_folder/META-INF/mliConf/prd_configuration.xml" token="LEGACY_ENDPOINT" value="http://grswebservices.manulife.com"/>
+					</else>
+				</if>
+			</then>
+			<else>
+				<echo message = "post action configuration file not avaialble for ${app.name}" />
+			</else>
+		</if>
+
+
+		<!--exec executable="${servicedeploy.dir}/EARExpander.bat">
+			<arg line="-ear"/>
+			<arg line="${ear}/${app.name}.ear"/>
+			<arg line="-operationDir"/>
+			<arg line="${zip}/expanded_folder"/>
+			<arg line="-operation"/>
+			<arg line="collapse"/>
+
+		</exec-->
+
+		<exec executable="cmd" dir="e:\RemoteBuilds\BPM\Builds\Builds\scripts\includes">
+		  <arg value="/c"/>
+		  <arg value="e:\RemoteBuilds\BPM\Builds\Builds\scripts\includes\RTCEARExpander_collapse.bat"/>
+		  <arg value="${servicedeploy.dir}"/>
+		  <arg value="${ear}"/>
+		  <arg value="${app.name}"/>
+		  <arg value="${zip}"/>
+		</exec>
+		
+		
+
+		<echo>Finished collapsed EARs</echo>
+
+
+	</target>
+
+
+    <target name="CreateEARs" description="Creates Ear files from zip" depends="createZIP">
+      <!--  <exec executable="${servicedeploy}">
+            <arg line="${zip}/${app.name}.zip"/>
+            <arg line="-ignoreErrors"/>
+            <arg line="-debug"/>
+            <arg line="-freeform"/>
+            <arg line="-outputApplication"/>
+            <arg line="${ear}/${app.name}.ear"/>
+             <arg line="-keep"/> 
+            <arg line="-novalidate"/>
+            <arg line="-cleanStagingModules"/>
+            <arg line="-classpath"/>
+            <arg line="${mylib}"/>
+        </exec>-->
+        
+        <exec executable="cmd" dir="${workingDir}\Builds\Builds\scripts">
+		  <arg value="/c"/>
+		  <arg value="${workingDir}\Builds\Builds\scripts\includes\RTCserviceDeploy.bat"/>
+		  <arg value="${servicedeploy}"/>
+		  <arg value="${zip}"/>
+		  <arg value="${app.name}"/>
+		  <arg value="${ear}"/>
+		  <arg value='&quot;${mylib}&quot;'/>
+		</exec>
+        
+        <echo>Finished creating EARs</echo>
+    </target>
+
+ 
+   
+
+    <!--<target name="createZIP">
+        <zip destfile="${zip}/${app.name}.zip">
+			<fileset dir="${workspace.dir}/${libraryPath}" includes="${alllib}"/>
+			<fileset dir="${workspace.dir}/${module1Path}" includes="${mainModule}"/>
+			<fileset dir="${workspace.dir}/${module2Path}" includes="${mediationModule}"/>
+		</zip>-->
+		
+	<target name="createZIP" >
+			<zip destfile="${zip}\${app.name}.zip">			
+				<zipfileset dir="${workingDir}/${module1Path}/${module1}" prefix="${module1}"/>			
+				<zipfileset dir="${workingDir}/${module2Path}/${module2}" prefix="${module2}"/>			
+				<zipfileset dir="${workingDir}/${libraryPath}/${library1}" prefix="${library1}"/>
+				<zipfileset dir="${workingDir}/${libraryPath}/${library2}" prefix="${library2}"/>
+			</zip>
+		<if>
+		<isset property="library3"/>
+		<then>				
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${libraryPath}/${library3}" prefix="${library3}"/>
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module3"/>	
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module3Path}/${module3}" prefix="${module3}"/>	
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module4"/>
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module4Path}/${module4}" prefix="${module4}"/>
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module5"/>	
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module5Path}/${module5}" prefix="${module5}"/>
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module6"/>
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module6Path}/${module6}" prefix="${module6}"/>	
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module7"/>
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module7Path}/${module7}" prefix="${module7}"/>	
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module8" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module8Path}/${module8}" prefix="${module8}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module9" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module9Path}/${module9}" prefix="${module9}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module10" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module10Path}/${module10}" prefix="${module10}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module11" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module11Path}/${module11}" prefix="${module11}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module12" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module12Path}/${module12}" prefix="${module12}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module13" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module13Path}/${module13}" prefix="${module13}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module14" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module14Path}/${module14}" prefix="${module14}" />	
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module15" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module15Path}/${module15}" prefix="${module15}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module16" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module16Path}/${module16}" prefix="${module16}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module17" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module17Path}/${module17}" prefix="${module17}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module18" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module18Path}/${module18}" prefix="${module18}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module19" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module19Path}/${module19}" prefix="${module19}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module20" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module20Path}/${module20}" prefix="${module20}" />
+			</zip>
+		</then>
+		</if>
+
+		<if>
+		<isset property="module21" />
+		<then>
+			<zip destfile="${zip}\${app.name}.zip" update="true">
+				<zipfileset dir="${workingDir}/${module21Path}/${module21}" prefix="${module21}" />
+			</zip>
+		</then>
+		</if>
+			
+    </target>
+	
+</project>

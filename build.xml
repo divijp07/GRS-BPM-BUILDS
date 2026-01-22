@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="Automated Build Script" basedir="." default="BuildAll">
+	<property name="target" value="${basedir}/BuildProject/target" />
+	<property name="zip" value="${target}/zip" />
+	<property name="expand_fold" value="${basedir}/target/zip/expanded_folder" />
+	<property name="ear" value="${target}/ear" />
+	<property name="git.dir" value="Workspace" />
+	<property name="git.release" value="master" />
+	<property file="build_config.properties"/>
+	
+	<taskdef resource="net/sf/antcontrib/antlib.xml" >
+	  <classpath>
+		<pathelement location="./ant-contrib-1.0b3.jar" />
+	  </classpath>
+	</taskdef>
+
+	<!-- // MACRODEF FOR GIT // -->
+	<macrodef name="git">
+		<attribute name = "command" />
+		<attribute name = "dir" default = "" />
+		<element name = "args" optional = "true" />
+		<sequential>
+			<!-- <echo file="GIT_COMMAND_LOG.log" message="git @{command} &#xa;" append="yes" /> -->
+			<exec executable = "${gitBashPath}" dir = "@{dir}">
+				<arg value = "@{command}" />
+				<args/>
+			</exec>
+		</sequential>
+	</macrodef>
+
+	<!-- // ADD YOUR GIT COMMAND MACRODEF HERE -->
+	<!-- FOR THIS TEMPLATE WE JUST NEED TO CLONE A GIT PROJECT -->
+	<macrodef name = "git-clone-pull">
+		<attribute name = "repository" />
+		<attribute name = "branch" />
+		<attribute name = "dest" />
+		<sequential>
+			<git command = "clone">
+				<args>
+					<arg value = "@{repository}" />
+					<arg value = "@{branch}" />
+					<arg value = "@{dest}" />
+				</args>
+			</git>
+			<!--git command = "pull" dir = "@{dest}" /-->
+		</sequential>
+	</macrodef>
+	
+	<target name="clean">
+		<delete dir="${zip}" />
+		<delete dir="${git.dir}" />
+		<mkdir dir="${zip}" />
+		<mkdir dir="${ear}" />
+		<mkdir dir="${git.dir}"/>
+	</target>
+
+	
+	<target name="getSourceCode" depends="clean">
+	<loadfile property="file" srcfile="GRS-BPM_GitUrlList.txt"/>
+		<for param="gitURL" list="${file}" delimiter="${line.separator}">
+		  <sequential>
+			<!-- CLONE/GET THE Builds SOURCE CODE -->
+			<git command = "clone">
+				<args>
+					<arg value = "@{gitURL}" />
+					
+					<arg value = "-b" />
+					<arg value = "${git.release}" />
+					<arg value = "--single-branch" />
+				</args>
+			</git>
+		  </sequential>
+		</for>
+		
+	<!--	<move todir="${git.dir}">
+			<fileset dir="${basedir}"  defaultexcludes="no">
+				<exclude name="build.xml"/>
+				<exclude name="build_config.properties"/>
+				<exclude name="buildapp.xml"/>
+				<exclude name="GRS-BPM_GitUrlList.txt"/>
+				<exclude name="${git.dir}"/>
+				<exclude name="Properties/**"/>
+				<exclude name="${target}"/>
+				<exclude name="ant-contrib-1.0b3.jar"/>
+			</fileset>
+		</move> -->
+	</target> 
+	
+	<target name="BuildAll" description="Build All EARs" depends="getSourceCode">
+
+		<!--build_BulkContributionSTPProxy added by Manish -->
+				<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_BulkContributionSTPProxy.properties"/>
+					<property file="build_config.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+				</ant>
+				<delete dir="${expand_fold}" />
+		<!--build_BulkContributionApp added by Manish -->
+				<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_BulkContributionApp.properties"/>
+					<property file="build_config.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+				</ant>
+				<delete dir="${expand_fold}" />
+		<!--build_agreementservices added by Bikramjit -->
+
+				<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_newPlanSTPApp.properties"/>
+					<property file="build_config.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+				</ant>
+				<delete dir="${expand_fold}" />
+				<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_employerPlanChangeSTPApp.properties"/>
+					<property file="build_config.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+				</ant>
+				<delete dir="${expand_fold}" />
+		<!--build_agreementservices added by Manoj -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_agreementservices.properties"/>
+			<property file="build_config.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_agreementcompensation added by Manoj -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_agreementcompensation.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Manoj -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_managemember.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Mousumi -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_organizationstructure.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Bharath -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_viewAvailableInvestments.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Bharath -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_verifyCustomer.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_findplangroup added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_findplangroup.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managecontract added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managecontract.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Bharath -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageEApplication.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managemember added by Bharath -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_assignPPSG.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_manageBeneficiary added by Muttappa -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageBeneficiary.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_emailnotification added by Muttappa -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_emailnotification.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_managemember added by Bharath -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageAgreementContributions.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_findAdvisorAgreement added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_findadvisoragreement.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		
+		<!--build_agreement added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_agreement.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		
+		<!--build_agreementinvestments added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_agreementinvestments.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managebankinfo added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managebankinfo.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managefinancialinstitution added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managefinancialinstitution.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_productcatalog added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_productcatalog.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managecustomertelephone added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managecustomertelephone.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managesubmission added by Nandan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managesubmission.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_manageAffiliate added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageAffiliate.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_manageAgreementInvestmentPackage added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageAgreementInvestmentPackage.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_manageCustomer added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageCustomer.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_manageEnrolment added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="build_config.properties"/>
+			<property file="${basedir}\Properties\build_manageEnrolment.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managePlanGroup added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managePlanGroup.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>	
+		<delete dir="${expand_fold}" />
+		<!--build_managePlanTransfer added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managePlanTransfer.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_managePolicy added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managePolicy.properties" />
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+			
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_manageFundDirection added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_fundDirection.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_ManageSponsor added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageSponsor.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_ManageIndividual added by Antony -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_ManageIndividual.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+			<!--build_ManageAgreementPayroll added by Antony -->
+			<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+				<property file="${basedir}\Properties\build_manageAgreementPayroll.properties"/>
+				<property name="sonarqube.scan" value="${sonar.do}"/>
+				<property file="build_config.properties"/>
+			</ant>
+			<delete dir="${expand_fold}" />
+				<!--build_ManageCustomerRelationship added by Antony -->
+				<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_ManageCustomerRelationship.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+					<property file="build_config.properties"/>
+				</ant>
+				<delete dir="${expand_fold}" />
+		<!--build_EstablishMember added by Bikramjit Saha -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_establishMember.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		
+		<!--build_manageCustomerAddress added by Manoj -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managecustomeraddress.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!-- build_establishIndividual added by Manish Poddar -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+					<property file="${basedir}\Properties\build_establishIndividual.properties"/>
+					<property name="sonarqube.scan" value="${sonar.do}"/>
+					<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		
+		<!-- build_managetransaction added by Debojyothi -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managetransaction.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		
+		<!-- build_manageProfile added by Muttappa -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageProfile.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+
+		<!--build_policyregistration added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_policyregistration.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_referencecatalog added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_referencecatalog.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_funddiscretion added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_funddiscretion.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!--build_agreementrules added by Murugesan -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_agreementrules.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!-- build_findcustomer added by Sourav -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_findcustomer.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!-- build_authorization added by Sourav -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_authorization.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+		<!-- build_manageEventTracking added by Sourav -->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageEventTracking.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+		<delete dir="${expand_fold}" />
+    <!-- build_securityMediation added by JC -->
+    <ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+      <property file="${basedir}\Properties\build_grsSecurityMediation.properties"/>
+      <property name="sonarqube.scan" value="${sonar.do}"/>
+	  <property file="build_config.properties"/>
+    </ant>
+<delete dir="${expand_fold}" />
+    <!-- build_grsManageCustomerBrandingNContactInfoMediation added by JC -->
+    <ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+      <property file="${basedir}\Properties\build_grsManageCustomerBrandingNContactInfoMediation.properties"/>
+      <property name="sonarqube.scan" value="${sonar.do}"/>
+	  <property file="build_config.properties"/>
+    </ant>
+<delete dir="${expand_fold}" />
+    <!-- build_GRS_AccountDetailsMediationApp added by JC -->
+    <ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+      <property file="${basedir}\Properties\build_GRS_AccountDetailsMediationApp.properties"/>
+      <property name="sonarqube.scan" value="${sonar.do}"/>
+	  <property file="build_config.properties"/>
+    </ant>
+<delete dir="${expand_fold}" />
+    <!-- build_GRS_AccountMediationApp added by JC -->
+    <ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+      <property file="${basedir}\Properties\build_GRS_AccountMediationApp.properties"/>
+      <property name="sonarqube.scan" value="${sonar.do}"/>
+	  <property file="build_config.properties"/>
+    </ant>
+    <delete dir="${expand_fold}" />
+	<!-- build__manageStatement added by Antony -->
+	<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+		<property file="${basedir}\Properties\build_manageStatement.properties"/>
+		<property name="sonarqube.scan" value="${sonar.do}"/>
+		<property file="build_config.properties"/>
+	</ant>		
+	<delete dir="${expand_fold}" />
+	<!-- Add the remaining components that are missing from the build -->
+	<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ActivatePolicySTPApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ActivatePolicySTPproxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_B2BAllianceSTPProxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_DecisionManagementproxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_employerPlanChangeSTPProxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_findadvisor.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_GroupPlanSetupSTPproxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_GroupPlanSetupSTPvApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_grsContributionsMediation.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>	
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_GRSSecuritySSO.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_GRS_ManageCustomerContactInfoMediationApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_IndividualFlowSTPproxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_IndividualFlowSTPvApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ManageAwdCpoTracking.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_managePayrollIntegration.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ManageServiceLog.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ManageUtilityMediationApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_MemberPlanChangesSTPApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_MemberPlanChangesSTPProxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_MemberShellEnrolmentSTPApp.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_newPlanSTPProxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_PayrollIntegrationGateway.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+	<property file="${basedir}\Properties\build_ShellEnrolmentSTPproxy.properties"/>
+	<property name="sonarqube.scan" value="${sonar.do}"/>
+	<property file="build_config.properties"/>
+</ant>
+<delete dir="${expand_fold}" />
+	</target>
+</project>

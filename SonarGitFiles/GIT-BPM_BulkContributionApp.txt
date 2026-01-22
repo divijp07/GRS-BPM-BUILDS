@@ -1,0 +1,5 @@
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/bpelPayrollIntegration.git
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/srvcPayrollIntegration.git
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/NotificationManagementMediation.git
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/ReferenceInformationMediation.git
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/common.git

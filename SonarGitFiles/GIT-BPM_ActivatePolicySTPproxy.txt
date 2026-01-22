@@ -1,0 +1,2 @@
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/PolicyManagementMediation.git
+https://git.platform.manulife.io/CDT_GitLabMigration_STAGING/grs-bpm/common.git

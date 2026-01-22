@@ -1,0 +1,325 @@
+name: BPM Build Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_to_build:
+        description: 'Application(s) to build (comma-separated or ALL)'
+        required: true
+        default: 'ALL'
+        type: string
+      release:
+        description: 'Release version'
+        required: true
+        default: 'grs'
+        type: string
+      branch_type:
+        description: 'Branch type (develop, main, etc.)'
+        required: true
+        default: 'develop'
+        type: string
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+env:
+  RELEASE: ${{ github.event.inputs.release || 'grs' }}
+  BRANCH_TYPE: ${{ github.event.inputs.branch_type || 'develop' }}
+  APP_TO_BUILD: ${{ github.event.inputs.app_to_build || 'ALL' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout build repository
+        uses: actions/checkout@v4
+        with:
+          path: build-repo
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      
+      - name: Set up Ant
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ant
+      
+      - name: Generate version number
+        id: version
+        run: |
+          VERSION_NUM=$(date +%Y%m%d-%H:%M)
+          echo "version_num=$VERSION_NUM" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION_NUM"
+      
+      - name: Create version info file
+        run: |
+          mkdir -p build-workspace/mliConf
+          echo "GRS_BPM_${RELEASE}_${BRANCH_TYPE}_${{ steps.version.outputs.version_num }}" > build-workspace/mliConf/VersionInfo.txt
+      
+      - name: Determine applications to build
+        id: apps
+        run: |
+          if [[ "${{ env.APP_TO_BUILD }}" == "ALL" ]]; then
+            # Full list of all applications
+            APPS="ActivatePolicySTPApp,ActivatePolicySTPproxy,agreement,agreementcompensation,agreementinvestments,agreementrules,agreementservices,assignPPSG,authorization,B2BAllianceSTPProxy,BulkContributionApp,BulkContributionSTPProxy,DecisionManagementproxy,emailnotification,employerPlanChangeSTPApp,employerPlanChangeSTPProxy,establishIndividual,establishMember,findadvisor,findadvisoragreement,findcustomer,findplangroup,fundDirection,funddiscretion,GroupPlanSetupSTPproxy,GroupPlanSetupSTPvApp,grsContributionsMediation,grsManageCustomerBrandingNContactInfoMediation,GRSSecurityMediation,GRSSecuritySSO,GRS_AccountDetailsMediationApp,GRS_AccountMediationApp,GRS_ManageCustomerContactInfoMediationApp,IndividualFlowSTPproxy,IndividualFlowSTPvApp,manageAffiliate,manageAgreementContributions,manageAgreementInvestmentPackage,ManageAgreementPayroll,ManageAwdCpoTracking,managebankinfo,manageBeneficiary,managecontract,manageCustomer,managecustomeraddress,ManageCustomerRelationship,managecustomertelephone,manageEApplication,manageEnrolment,manageEventTracking,managefinancialinstitution,ManageIndividual,managemember,managePayrollIntegration,managePlanGroup,managePlanTransfer,managePolicy,manageProfile,ManageServiceLog,ManageSponsor,managestatement,managesubmission,managetransaction,ManageUtilityMediationApp,MemberPlanChangesSTPApp,MemberPlanChangesSTPProxy,MemberShellEnrolmentSTPApp,newPlanSTPApp,newPlanSTPProxy,organizationstructure,PayrollIntegrationGateway,policyregistration,productcatalog,referencecatalog,ShellEnrolmentSTPproxy,verifyCustomer,viewAvailableInvestments"
+          else
+            APPS="${{ env.APP_TO_BUILD }}"
+          fi
+          echo "apps=$APPS" >> $GITHUB_OUTPUT
+          echo "Applications to build: $APPS"
+      
+      - name: Clone required repositories
+        run: |
+          set -e
+          BRANCH_NAME="${BRANCH_TYPE}-${RELEASE}"
+          echo "Branch name: $BRANCH_NAME"
+          
+          # Create workspace directory
+          mkdir -p repos
+          cd repos
+          
+          # Parse the app list
+          IFS=',' read -ra APP_LIST <<< "${{ steps.apps.outputs.apps }}"
+          
+          # Keep track of already cloned repos to avoid duplicates
+          declare -A CLONED_REPOS
+          
+          # Process each application
+          for APP in "${APP_LIST[@]}"; do
+            APP=$(echo "$APP" | xargs)  # Trim whitespace
+            GIT_FILE="../build-repo/SonarGitFiles/GIT-BPM_${APP}.txt"
+            
+            echo "Processing application: $APP"
+            echo "Looking for git file: $GIT_FILE"
+            
+            if [[ -f "$GIT_FILE" ]]; then
+              echo "Found git file for $APP"
+              
+              # Read each git URL from the file
+              while IFS= read -r GIT_URL; do
+                # Skip empty lines
+                [[ -z "$GIT_URL" ]] && continue
+                
+                # Extract repo name from URL
+                REPO_NAME=$(basename "$GIT_URL" .git)
+                
+                # Skip if already cloned
+                if [[ -n "${CLONED_REPOS[$REPO_NAME]}" ]]; then
+                  echo "  Repository $REPO_NAME already cloned, skipping..."
+                  continue
+                fi
+                
+                echo "  Cloning repository: $REPO_NAME from $GIT_URL"
+                
+                # Clone the repository with the specific branch
+                if git clone --branch "$BRANCH_NAME" --depth 1 "$GIT_URL" 2>/dev/null; then
+                  echo "  ✓ Successfully cloned $REPO_NAME (branch: $BRANCH_NAME)"
+                  CLONED_REPOS[$REPO_NAME]=1
+                else
+                  echo "  ⚠ Failed to clone $REPO_NAME with branch $BRANCH_NAME, trying default branch..."
+                  if git clone --depth 1 "$GIT_URL" 2>/dev/null; then
+                    echo "  ✓ Successfully cloned $REPO_NAME (default branch)"
+                    CLONED_REPOS[$REPO_NAME]=1
+                  else
+                    echo "  ✗ Failed to clone $REPO_NAME"
+                  fi
+                fi
+              done < "$GIT_FILE"
+            else
+              echo "⚠ Warning: Git file not found for $APP"
+            fi
+          done
+          
+          echo ""
+          echo "Summary of cloned repositories:"
+          ls -la
+        env:
+          # Use GitHub token or setup SSH keys as needed
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Copy repositories to build workspace
+        run: |
+          cp -r build-repo/* build-workspace/ || true
+          cp -r repos/* build-workspace/ || true
+      
+      - name: Build applications
+        run: |
+          cd build-workspace
+          
+          # Branch name for builds
+          BRANCH_NAME="${BRANCH_TYPE}-${RELEASE}"
+          
+          # Parse the app list
+          IFS=',' read -ra APP_LIST <<< "${{ steps.apps.outputs.apps }}"
+          
+          # Build each application
+          for APP in "${APP_LIST[@]}"; do
+            APP=$(echo "$APP" | xargs)  # Trim whitespace
+            PROP_FILE="build_${APP}.properties"
+            SRC_FILE="GIT-BPM_${APP}.txt"
+            
+            echo ""
+            echo "========================================="
+            echo "Building application: $APP"
+            echo "Property file: $PROP_FILE"
+            echo "Source file: $SRC_FILE"
+            echo "========================================="
+            
+            if [[ -f "Properties/${PROP_FILE}" ]] && [[ -f "SonarGitFiles/${SRC_FILE}" ]]; then
+              # Run Ant build
+              ant -buildfile build-single.xml \
+                -Dbuild.app="${PROP_FILE}" \
+                -Dgit.source.file="${SRC_FILE}" \
+                -Dgit.branch="${BRANCH_NAME}" || {
+                  echo "⚠ Build failed for $APP, continuing..."
+                  continue
+                }
+              echo "✓ Successfully built $APP"
+            else
+              echo "⚠ Skipping $APP - missing property or git file"
+            fi
+          done
+      
+      - name: Create standalone JAR (GRS_Common.jar)
+        run: |
+          cd build-workspace
+          
+          SOURCE_DIR="target/zip/expanded_folder/GRS_Common.jar"
+          JAR_NAME="GRS_Common.jar"
+          OUTPUT_DIR="target/standalone_jars"
+          
+          if [[ -d "$SOURCE_DIR" ]]; then
+            echo "Creating enterprise-standard standalone GRS_Common.jar"
+            
+            mkdir -p "$OUTPUT_DIR"
+            mkdir -p temp/jar_creation
+            
+            # Copy files excluding development artifacts
+            rsync -av --exclude='*.java' --exclude='.factorypath' \
+              --exclude='.jazzignore' --exclude='.gitignore' \
+              --exclude='.project' --exclude='.classpath' \
+              --exclude='.git' --exclude='.svn' --exclude='.settings' \
+              --exclude='target' --exclude='bin' \
+              "$SOURCE_DIR/" temp/jar_creation/
+            
+            # Copy version info
+            if [[ -f "mliConf/VersionInfo.txt" ]]; then
+              mkdir -p temp/jar_creation/META-INF
+              cp mliConf/VersionInfo.txt temp/jar_creation/META-INF/
+            fi
+            
+            # Create JAR
+            cd temp/jar_creation
+            jar -cf "../../${OUTPUT_DIR}/${JAR_NAME}" *
+            cd ../..
+            
+            echo "✓ Successfully created ${JAR_NAME}"
+            ls -lh "${OUTPUT_DIR}/${JAR_NAME}"
+          else
+            echo "⚠ Source directory not found: $SOURCE_DIR"
+          fi
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bpm-build-artifacts-${{ steps.version.outputs.version_num }}
+          path: |
+            build-workspace/target/ear/**/*.ear
+            build-workspace/target/standalone_jars/**/*.jar
+          retention-days: 30
+      
+      - name: Categorize BPM cluster artifacts
+        run: |
+          cd build-workspace/target/ear
+          
+          # BPM cluster application list
+          BPM_CLUSTER_APPS=(
+            "ActivatePolicySTPApp"
+            "B2BAllianceSTPProxy"
+            "BulkContributionSTPProxy"
+            "employerPlanChangeSTPApp"
+            "MemberPlanChangesSTPApp"
+            "NewPlanSTPApp"
+            "GroupPlanSetupSTPProxy"
+            "IndividualFlowSTPProxy"
+            "MemberShellEnrolmentSTPApp"
+            "BulkContributionApp"
+            "GroupPlanSetupSTPvApp"
+            "IndividualFlowSTPvApp"
+          )
+          
+          # BPM cluster EAR files
+          BPM_CLUSTER_EARS=(
+            "GRS_ActivatePolicySTP_ModApp.ear"
+            "GRS_B2BAllianceSTP_ProxyModApp.ear"
+            "GRS_CeridianBulkContributionSTP_ProxyModApp.ear"
+            "GRS_CeridianEmployerPlanChangesSTP_ModApp.ear"
+            "GRS_CeridianMemberPlanChangesSTP_ModApp.ear"
+            "GRS_CeridianNewPlanSTP_ModApp.ear"
+            "GRS_GroupPlanSetupSTP_ProxyModApp.ear"
+            "GRS_IndividualFlowSTP_ProxyModApp.ear"
+            "GRS_MemberShellEnrolmentSTPApp.ear"
+            "GRS_CeridianBulkContributionSTP_Mod_v1_0_1App.ear"
+            "GRS_GroupPlanSetupSTP_Mod_v1_2_1App.ear"
+            "GRS_IndividualFlowSTP_Mod_v1_0_3App.ear"
+          )
+          
+          mkdir -p ../cluster_bpm ../cluster_svc
+          
+          # Move BPM cluster EARs
+          for EAR in "${BPM_CLUSTER_EARS[@]}"; do
+            if [[ -f "$EAR" ]]; then
+              echo "Moving $EAR to cluster_bpm/"
+              mv "$EAR" ../cluster_bpm/
+            fi
+          done
+          
+          # Move remaining EARs to cluster_svc
+          for EAR in *.ear; do
+            if [[ -f "$EAR" ]]; then
+              echo "Moving $EAR to cluster_svc/"
+              mv "$EAR" ../cluster_svc/
+            fi
+          done
+      
+      - name: Upload BPM cluster artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bpm-cluster-artifacts-${{ steps.version.outputs.version_num }}
+          path: build-workspace/target/cluster_bpm/**/*.ear
+          retention-days: 30
+        if: success()
+      
+      - name: Upload Service cluster artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-cluster-artifacts-${{ steps.version.outputs.version_num }}
+          path: build-workspace/target/cluster_svc/**/*.ear
+          retention-days: 30
+        if: success()
+      
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: ${{ env.RELEASE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch Type**: ${{ env.BRANCH_TYPE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Applications**: ${{ env.APP_TO_BUILD }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version_num }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ -d "build-workspace/target/ear" ]]; then
+            echo "### Built Artifacts" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            find build-workspace/target -name "*.ear" -o -name "*.jar" | sort >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

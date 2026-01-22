@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="Automated Build Script" basedir="." default="BuildAll">
+	<property name="target" value="${basedir}/BuildProject/target" />
+	<property name="zip" value="${target}/zip" />
+	<property name="expand_fold" value="${basedir}/target/zip/expanded_folder" />
+	<property name="ear" value="${target}/ear" />
+	<property name="git.dir" value="Workspace" />
+	<property name="git.release" value="master" />
+	<property file="build_config.properties"/>
+	
+	<taskdef resource="net/sf/antcontrib/antlib.xml" >
+	  <classpath>
+		<pathelement location="./ant-contrib-1.0b3.jar" />
+	  </classpath>
+	</taskdef>
+
+	<!-- // MACRODEF FOR GIT // 
+	<macrodef name="git">
+		<attribute name = "command" />
+		<attribute name = "dir" default = "" />
+		<element name = "args" optional = "true" />
+		<sequential>
+			 <echo file="GIT_COMMAND_LOG.log" message="git @{command} &#xa;" append="yes" /> 
+			<exec executable = "${gitBashPath}" dir = "@{dir}">
+				<arg value = "@{command}" />
+				<args/>
+			</exec>
+		</sequential>
+	</macrodef>-->
+
+	<!-- // ADD YOUR GIT COMMAND MACRODEF HERE -->
+	<!-- FOR THIS TEMPLATE WE JUST NEED TO CLONE A GIT PROJECT 
+	<macrodef name = "git-clone-pull">
+		<attribute name = "repository" />
+		<attribute name = "branch" />
+		<attribute name = "dest" />
+		<sequential>
+			<git command = "clone">
+				<args>
+					<arg value = "@{repository}" />
+					<arg value = "@{branch}" />
+					<arg value = "@{dest}" />
+				</args>
+			</git>
+			git command = "pull" dir = "@{dest}" /
+		</sequential>
+	</macrodef>-->
+	
+	<target name="clean">
+		<delete dir="${zip}" />
+	
+		<mkdir dir="${zip}" />
+	
+	</target>
+
+	
+	<!--<target name="getSourceCode" depends="clean">
+	<loadfile property="file" srcfile="GRS-BPM_GitUrlList.txt"/>
+		<for param="gitURL" list="${file}" delimiter="${line.separator}">
+		  <sequential>
+			 CLONE/GET THE Builds SOURCE CODE
+			<git command = "clone">
+				<args>
+					<arg value = "@{gitURL}" />
+					
+					<arg value = "-b" />
+					<arg value = "${git.release}" />
+					<arg value = "single-branch" />
+				</args>
+			</git>
+		  </sequential>
+		</for>-->
+		
+	<!--	<move todir="${git.dir}">
+			<fileset dir="${basedir}"  defaultexcludes="no">
+				<exclude name="build.xml"/>
+				<exclude name="build_config.properties"/>
+				<exclude name="buildapp.xml"/>
+				<exclude name="GRS-BPM_GitUrlList.txt"/>
+				<exclude name="${git.dir}"/>
+				<exclude name="Properties/**"/>
+				<exclude name="${target}"/>
+				<exclude name="ant-contrib-1.0b3.jar"/>
+			</fileset>
+		</move> 
+	</target> -->
+	
+	<target name="BuildAll" description="Build All EARs" depends="clean">
+
+
+		
+		<!-- build_managetransaction added by Debojyothi -->
+		<!--<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_manageProfile.properties"/>
+			<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>-->
+		<ant antfile="buildapp.xml" inheritAll="false" target="RunSonarQube">
+			<property file="${basedir}\Properties\build_managetransaction.properties"/>
+<property name="sonarqube.scan" value="${sonar.do}"/>
+			<property file="build_config.properties"/>
+		</ant>
+
+	</target>
+</project>

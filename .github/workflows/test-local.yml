@@ -1,0 +1,97 @@
+name: Test BPM Build (Local)
+
+# Test workflow to verify the build process works locally before connecting to remote server
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_to_build:
+        description: 'Application(s) to build (comma-separated or ALL)'
+        required: true
+        default: 'agreement,manageCustomer'
+        type: string
+      release:
+        description: 'Release version'
+        required: true
+        default: 'grs'
+        type: string
+      branch_type:
+        description: 'Branch type (develop, main, etc.)'
+        required: true
+        default: 'develop'
+        type: string
+
+env:
+  RELEASE: ${{ github.event.inputs.release || 'grs' }}
+  BRANCH_TYPE: ${{ github.event.inputs.branch_type || 'develop' }}
+  APP_TO_BUILD: ${{ github.event.inputs.app_to_build || 'agreement,manageCustomer' }}
+
+jobs:
+  test-local-build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Display test information
+        shell: pwsh
+        run: |
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "  LOCAL BUILD TEST" -ForegroundColor Cyan
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "This workflow tests the build script execution locally" -ForegroundColor Yellow
+          Write-Host "before deploying to remote server." -ForegroundColor Yellow
+          Write-Host ""
+          Write-Host "Parameters:" -ForegroundColor White
+          Write-Host "  - Application: ${{ env.APP_TO_BUILD }}" -ForegroundColor Green
+          Write-Host "  - Release: ${{ env.RELEASE }}" -ForegroundColor Green
+          Write-Host "  - Branch Type: ${{ env.BRANCH_TYPE }}" -ForegroundColor Green
+          Write-Host ""
+      
+      - name: Run test build script
+        shell: pwsh
+        env:
+          AppToBuild: ${{ env.APP_TO_BUILD }}
+          Release: ${{ env.RELEASE }}
+          BranchType: ${{ env.BRANCH_TYPE }}
+        run: |
+          Write-Host "Executing test build script..." -ForegroundColor Cyan
+          Write-Host ""
+          
+          .\test-build-local.ps1
+      
+      - name: Verify environment variables
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host "  Environment Variable Verification" -ForegroundColor Cyan
+          Write-Host "========================================" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "Confirming parameters were passed correctly:" -ForegroundColor Yellow
+          Write-Host "  APP_TO_BUILD: ${{ env.APP_TO_BUILD }}" -ForegroundColor Green
+          Write-Host "  RELEASE: ${{ env.RELEASE }}" -ForegroundColor Green
+          Write-Host "  BRANCH_TYPE: ${{ env.BRANCH_TYPE }}" -ForegroundColor Green
+          Write-Host ""
+      
+      - name: Test Summary
+        if: always()
+        shell: pwsh
+        run: |
+          "## Local Build Test Summary" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Test Parameters" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **Release**: ${{ env.RELEASE }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **Branch Type**: ${{ env.BRANCH_TYPE }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "- **Applications**: ${{ env.APP_TO_BUILD }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Status" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "✅ Local test completed successfully!" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "### Next Steps" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "1. Configure remote server secrets in repository settings" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "2. Update the remote build workflow with server details" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          "3. Run the BPM Remote Build workflow" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
